@@ -1,0 +1,134 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager Navigation
+@implements IAsyncDisposable
+
+<PageTitle>Index</PageTitle>
+
+<div class="form-group">
+    <label>
+        User:
+        <input @bind="userInput" />
+    </label>
+</div>
+<div class="form-group">
+    <label>
+        Message:
+        <input @bind="messageInput" size="50" />
+    </label>
+</div>
+<button @onclick="Login" disabled="@(!IsConnected)">Login</button>
+<button @onclick="Dashboard" disabled="@(!IsConnectedDashboard)">Dashboard</button>
+<button @onclick="Questionary" disabled="@(!IsConnectedQuestionary)">Questionary</button>
+
+<hr>
+
+<ul id="messagesList">
+    @foreach (var message in messages)
+    {
+        <li>@message</li>
+    }
+</ul>
+
+@code {
+    private HubConnection? hubConnectionLogin;
+    private HubConnection? hubConnectionDashboard;
+    private HubConnection? hubConnectionQuestionary;
+
+    private List<string> messages = new List<string>();
+    private string? userInput;
+    private string? messageInput;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnectionLogin = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/loginhub"))
+            .Build();
+
+        hubConnectionLogin.On<string, string>("ReceiveMessage", (user, message) =>
+        {
+            var encodedMsg = $"{user}: {message}";
+            messages.Add(encodedMsg);
+            InvokeAsync(StateHasChanged);
+        });
+
+
+        hubConnectionDashboard = new HubConnectionBuilder()
+           .WithUrl(Navigation.ToAbsoluteUri("/loginhub"))
+           .Build();
+
+        hubConnectionDashboard.On<string, string>("ReceiveMessage", (user, message) =>
+        {
+            var encodedMsg = $"{user}: {message}";
+            messages.Add(encodedMsg);
+            InvokeAsync(StateHasChanged);
+        });
+
+        hubConnectionQuestionary = new HubConnectionBuilder()
+          .WithUrl(Navigation.ToAbsoluteUri("/loginhub"))
+          .Build();
+
+        hubConnectionQuestionary.On<string, string>("ReceiveMessage", (user, message) =>
+        {
+            var encodedMsg = $"{user}: {message}";
+            messages.Add(encodedMsg);
+            InvokeAsync(StateHasChanged);
+        });
+
+
+        await hubConnectionQuestionary.StartAsync();
+        await hubConnectionDashboard.StartAsync();
+        await hubConnectionLogin.StartAsync();
+    }
+
+    private async Task Login()
+    {
+        if (hubConnectionLogin is not null)
+        {
+            await hubConnectionLogin.SendAsync("SendMessage", userInput, messageInput);
+        }
+    }
+    private async Task Dashboard()
+    {
+        if (hubConnectionDashboard is not null)
+        {
+            await hubConnectionDashboard.SendAsync("SendMessage", userInput, messageInput);
+        }
+    }
+
+    private async Task Questionary()
+    {
+        if (hubConnectionQuestionary is not null)
+        {
+            await hubConnectionQuestionary.SendAsync("SendMessage", userInput, messageInput);
+        }
+    }
+
+
+
+
+    public bool IsConnected =>
+        hubConnectionLogin?.State == HubConnectionState.Connected;
+
+    public bool IsConnectedDashboard =>
+        hubConnectionDashboard?.State == HubConnectionState.Connected;
+
+    public bool IsConnectedQuestionary =>
+       hubConnectionQuestionary?.State == HubConnectionState.Connected;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnectionLogin is not null)
+        {
+            await hubConnectionLogin.DisposeAsync();
+        }
+        if (hubConnectionDashboard is not null)
+        {
+            await hubConnectionDashboard.DisposeAsync();
+        }
+        if (hubConnectionQuestionary is not null)
+        {
+            await hubConnectionQuestionary.DisposeAsync();
+        }
+    }
+}
